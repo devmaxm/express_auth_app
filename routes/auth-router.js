@@ -3,7 +3,10 @@ const crypto = require('crypto')
 const passport = require('passport')
 const LocalStrategy = require('passport-local')
 
+const createError = require('http-errors')
+
 const db = require('../db')
+const crypro = require("crypto");
 
 
 const router = express.Router()
@@ -18,7 +21,6 @@ passport.use(new LocalStrategy(function verify(username, password, cb) {
         if (!row) {
             return cb(null, false, {message: "Incorrect username or password."})
         }
-
         crypto.pbkdf2(password, row.salt, 31000, 32, 'sha256', function (err, hashedPassword) {
             if (err) {
                 return cb(err)
@@ -52,11 +54,59 @@ router.post('/login/password', passport.authenticate('local', {
     failRedirect: '/login'
 }))
 
-router.post('/logout', function(req, res, next) {
-    req.logout(function(err) {
-        if (err) {return next(err)}
+router.post('/logout', function (req, res, next) {
+    req.logout(function (err) {
+        if (err) {
+            return next(err)
+        }
         res.redirect('/')
     })
+})
+
+router.get('/signup', function (req, res) {
+    res.render('signup')
+})
+
+router.post('/signup', function (req, res, next) {
+    const {username, password, passwordConfirm} = req.body
+    if (!username || !password || !passwordConfirm) {
+        return next(createError(400, 'Please, fill all required fields'))
+    }
+    if (password !== passwordConfirm) {
+        return next(createError(400, `Passwords doesn't match`))
+    }
+    db.get(`SELECT *
+            FROM users
+            WHERE username = ?`, [username], function (err, row) {
+        if (err) {
+            return next(err)
+        }
+        if (row) {
+            return next(createError(400, 'User with this username is exist'))
+        }
+    })
+
+    const salt = crypto.randomBytes(16);
+    crypro.pbkdf2(password, salt, 31000, 32, 'sha256', function (err, hashedPassword) {
+        db.run('INSERT INTO users (username, hashed_password, salt) VALUES (?, ?, ?)',
+            [username, hashedPassword, salt
+            ], function (err) {
+
+                if (err) {
+                    return next(err)
+                }
+                const user = {id: this.lastID, username}
+                req.login(user, function (err) {
+                    if (err) {
+                        return next(err)
+                    }
+                    res.redirect('/');
+                })
+            }
+        )
+    })
+
+
 })
 
 module.exports = router

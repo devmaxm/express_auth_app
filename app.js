@@ -14,7 +14,6 @@ const SQLiteStore = require('connect-sqlite3')(session);
 const routes = require('./routes/index')
 
 
-
 const app = express();
 
 app.locals.pluralize = require('pluralize');
@@ -63,7 +62,6 @@ app.use(function (err, req, res, next) {
     res.status(err.status || 500);
     res.render('error');
 });
-
 
 
 module.exports = app;
