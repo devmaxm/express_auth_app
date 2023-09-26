@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/login.css">
+    <link rel="stylesheet" href="/css/index.css">
+    <title>Login</title>
+</head>
+<body>
+<section class="prompt">
+    <h3>Exercise App</h3>
+    <h1>Sign in</h1>
+    <hr>
+
+    <form action="/login/password" method="post">
+        <section>
+            <label for="username">Username</label>
+            <input id="username" name="username" type=""text
+                   autocomplete="current-password" required autofocus>
+        </section>
+        <section>
+            <label for="password">Password</label>
+            <input id="password" name="password" type=""text
+                   autocomplete="current-password" required autofocus>
+        </section>
+        <button type="submit">Sign in</button>
+    </form>
+    <hr>
+    <p><a class="button google" href="/login/federated/google">Sign in with Google</a></p>
+    <p><a class="button facebook" href="/login/federated/facebook">Sign in with Facebook</a></p>
+    <p class="help">Don't have an account? <a href="/signup">Sign Up</a></p>
+</section>
+<footer class="info">
+    <p>Created by Max Maiokha</p>
+    <p>Made with love</p>
+    <hr/>
+</footer>
+</body>
+</html>
