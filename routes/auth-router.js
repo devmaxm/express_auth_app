@@ -1,15 +1,63 @@
-const express = require('express')
-const crypto = require('crypto')
-const passport = require('passport')
-const LocalStrategy = require('passport-local')
+const express = require('express');
+const crypto = require('crypto');
+const passport = require('passport');
+const LocalStrategy = require('passport-local');
+const GoogleStrategy = require('passport-google-oidc');
 
-const createError = require('http-errors')
+const createError = require('http-errors');
 
 const db = require('../db')
 const crypro = require("crypto");
 
 
-const router = express.Router()
+const router = express.Router();
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: '/oauth2/redirect/google',
+    scope: ['profile']
+}, function verify(issuer, profile, cb) {
+    db.get(`SELECT * FROM federated_credentials WHERE provider = ? AND subject = ?`, [issuer, profile.id], function (err, row) {
+        if (err) {
+            return cb(err)
+        }
+        if (!row) {
+            db.run(`INSERT INTO users (name) VALUES(?)`, [profile.displayName], function (err) {
+                if (err) {
+                    return cb(err)
+                }
+                const id = this.lastID
+
+                db.run(
+                    `INSERT INTO federated_credentials (user_id, provider, subject) VALUES (?, ?, ?)`,
+                    [id, issuer, profile.id],
+                    function (err) {
+                        if (err) {
+                            return cb(err)
+                        }
+                        profile.displayName
+                        const user = {
+                            id,
+                            name: profile.displayName
+                        }
+                        return cb(null, user)
+                    }
+                )
+            })
+        } else {
+            db.get(`SELECT * FROM users WHERE id = ?`, [row.user_id], function (err, row) {
+                if (err) {
+                    return cb(err)
+                }
+                if (!row) {
+                    return cb(null, false)
+                }
+                return cb(null, row)
+            })
+        }
+    })
+}));
 
 passport.use(new LocalStrategy(function verify(username, password, cb) {
     db.get(`SELECT *
@@ -31,7 +79,7 @@ passport.use(new LocalStrategy(function verify(username, password, cb) {
             return cb(null, row)
         })
     })
-}))
+}));
 
 passport.serializeUser(function (user, cb) {
     return cb(null, {
@@ -39,7 +87,7 @@ passport.serializeUser(function (user, cb) {
         username: user.username,
         name: user.name
     })
-})
+});
 
 passport.deserializeUser(function (user, cb) {
     return cb(null, user)
@@ -47,9 +95,16 @@ passport.deserializeUser(function (user, cb) {
 
 router.get('/login', function (req, res) {
     res.render('login')
-})
+});
 
 router.post('/login/password', passport.authenticate('local', {
+    successRedirect: '/',
+    failRedirect: '/login'
+}));
+
+router.get('/login/federated/google', passport.authenticate('google'))
+
+router.get('/oauth2/redirect/google', passport.authenticate('google', {
     successRedirect: '/',
     failRedirect: '/login'
 }))
@@ -61,11 +116,11 @@ router.post('/logout', function (req, res, next) {
         }
         res.redirect('/')
     })
-})
+});
 
 router.get('/signup', function (req, res) {
     res.render('signup')
-})
+});
 
 router.post('/signup', function (req, res, next) {
     const {username, password, passwordConfirm} = req.body
@@ -105,8 +160,6 @@ router.post('/signup', function (req, res, next) {
             }
         )
     })
-
-
-})
+});
 
 module.exports = router
